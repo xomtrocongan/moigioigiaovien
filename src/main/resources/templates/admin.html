@@ -1,0 +1,664 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TeacherMatch | Admin Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #17365d;
+            background: #f4f7fc;
+        }
+
+        .layout {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 270px;
+            flex-shrink: 0;
+            background: #ffffff;
+            border-right: 1px solid #e5ebf4;
+            padding: 28px 20px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            margin-bottom: 38px;
+        }
+
+        .brand-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 15px;
+            background: #ff9d32;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .brand-name {
+            font-size: 23px;
+            font-weight: bold;
+            color: #17365d;
+        }
+
+        .brand-subtitle {
+            margin-top: 5px;
+            font-size: 11px;
+            letter-spacing: 2px;
+            color: #8294ac;
+        }
+
+        .section-label {
+            margin: 20px 12px 16px;
+            color: #8b9bb0;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 10px;
+            padding: 18px 16px;
+            border-radius: 13px;
+            color: #63758d;
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            background: #fff0dc;
+            color: #e8891b;
+        }
+
+        .nav-icon {
+            width: 24px;
+            text-align: center;
+            font-size: 19px;
+        }
+
+        .sidebar-bottom {
+            margin-top: 45px;
+            padding: 18px;
+            background: #f4f8fd;
+            border: 1px solid #e7eef8;
+            border-radius: 14px;
+        }
+
+        .sidebar-bottom p {
+            margin: 6px 0;
+            color: #71839b;
+            font-size: 13px;
+        }
+
+        .logout {
+            display: inline-block;
+            margin-top: 15px;
+            color: #d65d51;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .main {
+            flex: 1;
+            min-width: 0;
+            padding: 32px;
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 30px;
+            color: #8292a9;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .badge {
+            padding: 9px 14px;
+            border-radius: 9px;
+            background: #e9f0fa;
+            color: #58708d;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        h1 {
+            margin: 0 0 28px;
+            font-size: 36px;
+            color: #17365d;
+        }
+
+        h2 {
+            margin: 0 0 20px;
+            font-size: 21px;
+        }
+
+        .hero {
+            margin-bottom: 25px;
+            padding: 30px;
+            border: 1px solid #dceaff;
+            border-radius: 22px;
+            background: linear-gradient(120deg, #eaf3ff, #f7faff);
+        }
+
+        .eyebrow {
+            color: #8093ad;
+            font-size: 13px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .hero h2 {
+            margin: 18px 0 12px;
+            font-size: 30px;
+        }
+
+        .hero p {
+            margin: 0;
+            color: #7f91aa;
+            line-height: 1.6;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card,
+        .panel {
+            background: #ffffff;
+            border: 1px solid #e6edf6;
+            border-radius: 18px;
+            padding: 25px;
+            box-shadow: 0 3px 12px rgba(28, 56, 95, 0.03);
+        }
+
+        .stat-label {
+            color: #8192a9;
+            font-size: 14px;
+        }
+
+        .stat-value {
+            margin: 15px 0 8px;
+            color: #1680ee;
+            font-size: 38px;
+            font-weight: bold;
+        }
+
+        .stat-note {
+            color: #91a0b4;
+            font-size: 13px;
+        }
+
+        .panel {
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .panel-description {
+            margin-top: -10px;
+            margin-bottom: 20px;
+            color: #8292a9;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            padding: 16px 14px;
+            background: #f5f8fc;
+            color: #7f90a7;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 17px 14px;
+            border-bottom: 1px solid #edf1f7;
+            color: #526780;
+            font-size: 14px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .role-badge,
+        .level-badge {
+            display: inline-block;
+            padding: 7px 11px;
+            border-radius: 8px;
+            background: #eaf2ff;
+            color: #3975c5;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: minmax(180px, 1.4fr) minmax(140px, 1fr) minmax(150px, 0.8fr) auto;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 24px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 9px;
+            color: #526780;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            min-width: 0;
+            height: 47px;
+            padding: 0 13px;
+            border: 1px solid #dce5f0;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #526780;
+            font: inherit;
+        }
+
+        input:focus,
+        select:focus {
+            outline: 2px solid #d6e8ff;
+            border-color: #1680ee;
+        }
+
+        .button {
+            min-height: 47px;
+            padding: 0 22px;
+            border: none;
+            border-radius: 10px;
+            background: #1680ee;
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background: #086ed6;
+        }
+
+        .empty-state {
+            padding: 30px 12px;
+            text-align: center;
+            color: #8999ad;
+        }
+
+        .footer-note {
+            margin-top: 18px;
+            color: #8a9ab0;
+            font-size: 12px;
+        }
+
+        @media (max-width: 1050px) {
+            .sidebar {
+                width: 220px;
+                padding: 22px 14px;
+            }
+
+            .main {
+                padding: 24px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .filters {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 650px) {
+            .layout {
+                display: block;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #e5ebf4;
+            }
+
+            .sidebar-bottom {
+                margin-top: 20px;
+            }
+
+            .main {
+                padding: 18px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            .filters {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="layout">
+
+    <!-- ADMIN SIDEBAR: ONLY THREE MENU ITEMS -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">T</div>
+            <div>
+                <div class="brand-name">TeacherMatch</div>
+                <div class="brand-subtitle">RECRUITMENT PORTAL</div>
+            </div>
+        </div>
+
+        <div class="section-label">WORKSPACE</div>
+
+        <a class="nav-link active" href="#dashboard">
+            <span class="nav-icon">▦</span>
+            <span>Dashboard</span>
+        </a>
+
+        <a class="nav-link" href="#accounts">
+            <span class="nav-icon">♟</span>
+            <span>Accounts &amp; Permissions</span>
+        </a>
+
+        <a class="nav-link" href="#logs">
+            <span class="nav-icon">☷</span>
+            <span>System Logs</span>
+        </a>
+
+        <div class="sidebar-bottom">
+            <strong th:text="${user != null ? user.username : 'Administrator'}">
+                Administrator
+            </strong>
+            <p>System Admin</p>
+            <a class="logout" th:href="@{/logout}">Log out</a>
+        </div>
+
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+        <div class="topbar">
+            <div>System Admin / Overview</div>
+
+            <div class="topbar-right">
+                <span class="badge">ADMIN</span>
+                <span th:text="${user != null ? user.username : 'Admin'}">
+                    Admin
+                </span>
+            </div>
+        </div>
+
+        <!-- DASHBOARD -->
+        <section id="dashboard">
+            <h1>Admin dashboard</h1>
+
+            <div class="hero">
+                <div class="eyebrow">SYSTEM OVERVIEW</div>
+                <h2>Everything in one place.</h2>
+                <p>
+                    Manage user accounts, review permissions, and monitor
+                    system activity from one workspace.
+                </p>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Total accounts</div>
+                    <div class="stat-value"
+                         th:text="${users != null ? #lists.size(users) : 0}">
+                        0
+                    </div>
+                    <div class="stat-note">Registered users</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Teacher profiles</div>
+                    <div class="stat-value"
+                         th:text="${teachers != null ? #lists.size(teachers) : 0}">
+                        0
+                    </div>
+                    <div class="stat-note">Profiles in the system</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label">Recorded activities</div>
+                    <div class="stat-value"
+                         th:text="${totalLogs != null ? totalLogs : 0}">
+                        0
+                    </div>
+                    <div class="stat-note">System activity records</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ACCOUNTS AND PERMISSIONS -->
+        <section id="accounts" class="panel">
+            <h2>Accounts &amp; Permissions</h2>
+            <p class="panel-description">
+                Review existing accounts and create accounts for authorized
+                users. Each account is assigned a role.
+            </p>
+
+            <form th:action="@{/admin/users}" method="post">
+                <div class="filters">
+                    <div class="field">
+                        <label for="newUsername">Username</label>
+                        <input id="newUsername"
+                               type="text"
+                               name="username"
+                               placeholder="Enter username"
+                               required>
+                    </div>
+
+                    <div class="field">
+                        <label for="newPassword">Password</label>
+                        <input id="newPassword"
+                               type="password"
+                               name="password"
+                               placeholder="Enter password"
+                               required>
+                    </div>
+
+                    <div class="field">
+                        <label for="newRole">Role</label>
+                        <select id="newRole" name="role" required>
+                            <option value="STAFF">Matching Staff</option>
+                            <option value="PARTNER">Partner</option>
+                            <option value="TEACHER">Teacher</option>
+                            <option value="ADMIN">Admin</option>
+                        </select>
+                    </div>
+
+                    <button class="button" type="submit">
+                        Create account
+                    </button>
+                </div>
+            </form>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr th:each="account : ${users}">
+                        <td th:text="${account.username}">admin</td>
+                        <td>
+                            <span class="role-badge"
+                                  th:text="${account.role}">
+                                ADMIN
+                            </span>
+                        </td>
+                    </tr>
+
+                    <tr th:if="${users == null or #lists.isEmpty(users)}">
+                        <td colspan="2" class="empty-state">
+                            No accounts found.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SYSTEM LOGS -->
+        <section id="logs" class="panel">
+            <h2>System Logs</h2>
+            <p class="panel-description">
+                Search account activity, actions, and candidate profiles.
+                Narrow the results by event level or date.
+            </p>
+
+            <form th:action="@{/admin}" method="get">
+                <div class="filters">
+                    <div class="field">
+                        <label for="keyword">Search in logs</label>
+                        <input id="keyword"
+                               type="text"
+                               name="keyword"
+                               placeholder="Account, action, profile..."
+                               th:value="${keyword}">
+                    </div>
+
+                    <div class="field">
+                        <label for="level">Level</label>
+                        <select id="level" name="level">
+                            <option value="ALL"
+                                    th:selected="${selectedLevel == 'ALL'}">
+                                ALL
+                            </option>
+                            <option value="INFO"
+                                    th:selected="${selectedLevel == 'INFO'}">
+                                INFO
+                            </option>
+                            <option value="WARNING"
+                                    th:selected="${selectedLevel == 'WARNING'}">
+                                WARNING
+                            </option>
+                            <option value="ERROR"
+                                    th:selected="${selectedLevel == 'ERROR'}">
+                                ERROR
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="field">
+                        <label for="date">Date</label>
+                        <input id="date"
+                               type="date"
+                               name="date"
+                               th:value="${selectedDate}">
+                    </div>
+
+                    <button class="button" type="submit">Search</button>
+                </div>
+            </form>
+
+            <h2>Recent Activities</h2>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Level</th>
+                        <th>User</th>
+                        <th>Event</th>
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    <tr th:each="entry : ${logs}">
+                        <td th:text="${entry.timestamp}">2026-10-20 10:30</td>
+                        <td>
+                            <span class="level-badge"
+                                  th:text="${entry.level}">
+                                INFO
+                            </span>
+                        </td>
+                        <td th:text="${entry.username}">admin</td>
+                        <td th:text="${entry.action}">Logged in</td>
+                    </tr>
+
+                    <tr th:if="${logs == null or #lists.isEmpty(logs)}">
+                        <td colspan="4" class="empty-state">
+                            No activities match your search.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="footer-note">
+                Activity records shown here depend on the data returned
+                by the application.
+            </p>
+        </section>
+
+    </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,247 @@
+
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner | TeacherMatch</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <style>
+        .partner-layout{display:flex;min-height:100vh;background:#f5f7fc;color:#203454}
+        .partner-layout .sidebar{flex:0 0 256px}
+        .partner-main{flex:1;min-width:0;padding:28px 32px}
+        .partner-topbar{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:28px}
+        .partner-crumb{display:block;color:#8595af;font-size:12px;margin-bottom:8px}
+        .partner-title{margin:0;font-size:28px;color:#203454}
+        .partner-user{display:flex;align-items:center;gap:12px}
+        .partner-avatar{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:13px;background:#e4f1ff;color:#0879ed;font-weight:800}
+        .partner-user small{display:block;margin-top:4px;color:#8595af}
+        .partner-welcome{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:22px;padding:30px;border:1px solid #dce9ff;border-radius:18px;background:linear-gradient(110deg,#eaf3ff,#fbfdff)}
+        .partner-eyebrow{margin:0 0 12px;color:#8a9fbd;font-size:11px;font-weight:800;letter-spacing:1.7px}
+        .partner-welcome h2{margin:0 0 10px;font-size:24px;color:#203454}
+        .partner-welcome p:last-child{margin:0;color:#7d8da8;line-height:1.6}
+        .partner-welcome-mark{color:#72aaff;font-size:42px;line-height:1}
+        .partner-panel{margin-bottom:24px;padding:26px;border:1px solid #e3eaf4;border-radius:16px;background:#fff}
+        .partner-panel-head{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}
+        .partner-panel-head h2{margin:0 0 7px;font-size:20px}
+        .partner-panel-head p{margin:0;color:#8090aa;font-size:13px}
+        .partner-search{width:min(260px,100%);box-sizing:border-box;padding:12px 14px;border:1px solid #dce5f0;border-radius:9px;font:inherit}
+        .partner-candidate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,350px));gap:16px}
+        .partner-candidate{min-width:0;padding:19px;border:1px solid #e1e9f4;border-radius:13px;background:#fff}
+        .partner-candidate-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px}
+        .partner-candidate-avatar{display:flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:13px;background:#e5f2ff;color:#0879ed;font-size:20px;font-weight:800}
+        .partner-status{padding:6px 9px;border-radius:7px;background:#e1f7ee;color:#11845f;font-size:10px;font-weight:800}
+        .partner-candidate h3{margin:0 0 7px;font-size:17px}
+        .partner-muted{color:#7d8da8;font-size:12px;line-height:1.6}
+        .partner-facts{display:grid;gap:7px;margin:16px 0;color:#526985;font-size:12px}
+        .partner-docs{display:flex;flex-wrap:wrap;gap:16px;padding:15px 0;border-top:1px solid #e2eaf4;border-bottom:1px solid #e2eaf4;font-size:12px}
+        .partner-docs a{color:#0879ed;text-decoration:none}
+        .partner-docs a:hover{text-decoration:underline}
+        .partner-form-label{display:block;margin:16px 0 8px;color:#596d89;font-size:12px;font-weight:700}
+        .partner-datetime{box-sizing:border-box;width:100%;padding:12px;border:1px solid #d6e1ef;border-radius:8px;font:inherit;color:#526985}
+        .partner-button{display:inline-flex;align-items:center;justify-content:center;width:100%;margin-top:12px;padding:12px 15px;border:0;border-radius:8px;background:#0879ed;color:#fff;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer}
+        .partner-button:hover{background:#0568d0}
+        .partner-table-wrap{overflow-x:auto}
+        .partner-table{width:100%;border-collapse:collapse;font-size:13px}
+        .partner-table th,.partner-table td{padding:13px 12px;border-bottom:1px solid #e7edf5;text-align:left;vertical-align:top}
+        .partner-table th{color:#7486a1;font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+        .partner-feedback{min-width:150px;width:100%;box-sizing:border-box;padding:9px;border:1px solid #dce5f0;border-radius:7px;font:inherit}
+        .partner-inline-button{margin-top:7px;padding:8px 11px;border:0;border-radius:7px;background:#0879ed;color:#fff;font-weight:700;cursor:pointer}
+        .partner-empty{padding:24px;color:#7d8da8;text-align:center}
+        .partner-sidebar-nav .sidebar-link.active{background:#fff0da;color:#dc7608}
+        @media(max-width:850px){.partner-layout{display:block}.partner-layout .sidebar{width:100%;min-width:0;min-height:auto}.partner-main{padding:20px 14px}.partner-topbar{align-items:flex-start;flex-direction:column}.partner-welcome{padding:22px}.partner-panel{padding:18px}.partner-panel-head{align-items:stretch;flex-direction:column}.partner-candidate-grid{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="partner-layout">
+    <div th:replace="~{fragments :: sidebar('dashboard')}"></div>
+
+    <main class="partner-main">
+        <header class="partner-topbar">
+            <div>
+                <span class="partner-crumb">Partner / Shared Profiles</span>
+                <h1 class="partner-title">Shared profiles</h1>
+            </div>
+            <div class="partner-user">
+                <div class="partner-avatar">BE</div>
+                <div>
+                    <strong th:text="${user != null and user.fullName != null ? user.fullName : 'Hiring Partner'}">Bright English Center</strong>
+                    <small>Hiring partner</small>
+                </div>
+            </div>
+        </header>
+
+        <section id="dashboard" class="partner-welcome">
+            <div>
+                <p class="partner-eyebrow">YOUR CANDIDATE SHORTLIST</p>
+                <h2>Meet your next great teacher.</h2>
+                <p>Review candidate profiles, explore documents and request an interview in a few clicks.</p>
+            </div>
+            <span class="partner-welcome-mark" aria-hidden="true">✦</span>
+        </section>
+
+        <section id="profiles" class="partner-panel">
+            <div class="partner-panel-head">
+                <div>
+                    <h2>Shared teacher profiles</h2>
+                    <p>Only candidates shared by Matching Staff are visible here.</p>
+                </div>
+                <input id="candidateSearch" class="partner-search" type="search" placeholder="Search candidates..." aria-label="Search candidates">
+            </div>
+
+            <div class="partner-candidate-grid" id="candidateGrid">
+                <article class="partner-candidate" th:each="teacher : ${teachers}">
+                    <div class="partner-candidate-top">
+                        <div class="partner-candidate-avatar"
+                             th:text="${teacher.name != null and !teacher.name.isEmpty() ? #strings.substring(teacher.name,0,1).toUpperCase() : 'T'}">E</div>
+                        <span class="partner-status"
+                              th:text="${teacher.status != null and !teacher.status.isEmpty() ? teacher.status : 'READY'}">READY</span>
+                    </div>
+
+                    <h3 class="candidate-name"
+                        th:text="${teacher.name != null ? teacher.name : 'Teacher'}">Emily Martin</h3>
+                    <div class="partner-muted">
+                        <span th:text="${teacher.nationality != null ? teacher.nationality : ''}">American</span>
+                        <span th:if="${teacher.location != null and !teacher.location.isEmpty()}"> · </span>
+                        <span th:text="${teacher.location != null ? teacher.location : ''}">Ho Chi Minh City</span>
+                    </div>
+
+                    <div class="partner-facts">
+                        <div>
+                            ◷ <strong th:text="${teacher.experience != null and !teacher.experience.isEmpty() ? teacher.experience : 'Not specified'}">5 years</strong> experience
+                        </div>
+                        <div>
+                            ✓ <strong th:text="${teacher.qualification != null and !teacher.qualification.isEmpty() ? teacher.qualification : 'Not specified'}">TEFL, Bachelor's degree</strong>
+                        </div>
+                        <div th:if="${teacher.subject != null and !teacher.subject.isEmpty()}">
+                            Subject: <strong th:text="${teacher.subject}">English</strong>
+                        </div>
+                    </div>
+
+                    <div class="partner-docs">
+                        <a th:if="${teacher.cvUrl != null and !teacher.cvUrl.isEmpty()}"
+                           th:href="${teacher.cvUrl}" target="_blank" rel="noopener">View CV ↗</a>
+                        <span th:unless="${teacher.cvUrl != null and !teacher.cvUrl.isEmpty()}" class="partner-muted">CV not uploaded</span>
+
+                        <a th:if="${teacher.videoUrl != null and !teacher.videoUrl.isEmpty()}"
+                           th:href="${teacher.videoUrl}" target="_blank" rel="noopener">Demo video ↗</a>
+                        <span th:unless="${teacher.videoUrl != null and !teacher.videoUrl.isEmpty()}" class="partner-muted">Video not uploaded</span>
+                    </div>
+
+                    <form th:action="@{/partner/interview/{id}(id=${teacher.id})}" method="post">
+                        <label class="partner-form-label" th:for="${'interview-time-' + teacher.id}">Preferred interview time</label>
+                        <input class="partner-datetime"
+                               type="datetime-local"
+                               name="dateTime"
+                               th:id="${'interview-time-' + teacher.id}"
+                               required>
+                        <button class="partner-button" type="submit">Request interview →</button>
+                    </form>
+                </article>
+            </div>
+
+            <div class="partner-empty" id="noCandidates" th:if="${#lists.isEmpty(teachers)}">
+                No shared teacher profiles are available yet.
+            </div>
+        </section>
+
+        <section id="interviews" class="partner-panel">
+            <div class="partner-panel-head">
+                <div>
+                    <h2>Interviews &amp; Results</h2>
+                    <p>Review interview requests and update feedback when available.</p>
+                </div>
+            </div>
+
+            <div class="partner-table-wrap" th:if="${interviews != null and !#lists.isEmpty(interviews)}">
+                <table class="partner-table">
+                    <thead>
+                    <tr>
+                        <th>Teacher</th>
+                        <th>Interview time</th>
+                        <th>Status</th>
+                        <th>Meeting</th>
+                        <th>Feedback / Result</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="interview : ${interviews}">
+                        <td>
+                            <strong th:text="${interview.teacherName != null ? interview.teacherName : 'Teacher'}">Emily Martin</strong>
+                        </td>
+                        <td th:text="${interview.dateTime != null ? interview.dateTime : 'Not scheduled'}">2026-10-20</td>
+                        <td th:text="${interview.status != null ? interview.status : 'PENDING'}">PENDING</td>
+                        <td>
+                            <a th:if="${interview.meetingUrl != null and !interview.meetingUrl.isEmpty()}"
+                               th:href="${interview.meetingUrl}" target="_blank" rel="noopener">Open meeting ↗</a>
+                            <span th:unless="${interview.meetingUrl != null and !interview.meetingUrl.isEmpty()}">Not available</span>
+                        </td>
+                        <td>
+                            <form th:action="@{/partner/feedback/{id}(id=${interview.id})}" method="post">
+                                <input class="partner-feedback" type="text" name="feedback"
+                                       placeholder="Add feedback or result"
+                                       th:value="${interview.feedback}">
+                                <button class="partner-inline-button" type="submit">Save</button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="partner-empty" th:if="${interviews == null or #lists.isEmpty(interviews)}">
+                No interviews yet. Request an interview from a shared teacher profile to get started.
+            </div>
+        </section>
+    </main>
+</div>
+
+<script>
+    (function () {
+        const sectionIds = ['dashboard', 'profiles', 'interviews'];
+        const links = document.querySelectorAll('.sidebar-nav .sidebar-link');
+
+        function getCurrentSection() {
+            const hash = window.location.hash.replace('#', '');
+            return sectionIds.includes(hash) ? hash : 'dashboard';
+        }
+
+        function setActiveSection(section) {
+            links.forEach(function (link) {
+                const active = link.dataset.section === section;
+                link.classList.toggle('active', active);
+                if (active) {
+                    link.setAttribute('aria-current', 'page');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+            });
+        }
+
+        links.forEach(function (link) {
+            link.addEventListener('click', function () {
+                setActiveSection(link.dataset.section);
+            });
+        });
+
+        window.addEventListener('hashchange', function () {
+            setActiveSection(getCurrentSection());
+        });
+
+        setActiveSection(getCurrentSection());
+
+        const search = document.getElementById('candidateSearch');
+        const cards = document.querySelectorAll('#candidateGrid .partner-candidate');
+
+        if (search) {
+            search.addEventListener('input', function () {
+                const query = search.value.trim().toLowerCase();
+                cards.forEach(function (card) {
+                    card.hidden = !card.innerText.toLowerCase().includes(query);
+                });
+            });
+        }
+    })();
+</script>
+</body>
+</html>

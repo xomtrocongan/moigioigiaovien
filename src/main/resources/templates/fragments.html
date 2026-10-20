@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside th:fragment="sidebar(activePage)" class="sidebar">
+    <div class="brand">
+        <div class="brand-logo">T</div>
+        <div class="brand-text">
+            <h1>TeacherMatch</h1>
+            <p>RECRUITMENT PORTAL</p>
+        </div>
+    </div>
+
+    <div class="sidebar-section-title">WORKSPACE</div>
+
+    <nav class="sidebar-nav" aria-label="Partner navigation">
+        <a th:href="@{/partner#dashboard}"
+           href="/partner#dashboard"
+           class="sidebar-link"
+           th:classappend="${activePage == 'dashboard'} ? ' active' : ''"
+           data-section="dashboard">
+            <span class="sidebar-icon" aria-hidden="true">▦</span>
+            <span>Dashboard</span>
+        </a>
+
+        <a th:href="@{/partner#profiles}"
+           href="/partner#profiles"
+           class="sidebar-link"
+           th:classappend="${activePage == 'profiles'} ? ' active' : ''"
+           data-section="profiles">
+            <span class="sidebar-icon" aria-hidden="true">♧</span>
+            <span>Shared profiles</span>
+        </a>
+
+        <a th:href="@{/partner#interviews}"
+           href="/partner#interviews"
+           class="sidebar-link"
+           th:classappend="${activePage == 'interviews'} ? ' active' : ''"
+           data-section="interviews">
+            <span class="sidebar-icon" aria-hidden="true">◷</span>
+            <span>Interviews &amp; Results</span>
+        </a>
+    </nav>
+
+    <div class="sidebar-bottom">
+        <div class="help-card">
+            <h3>Need a hand?</h3>
+            <p>Keep every hiring step moving.</p>
+        </div>
+
+        <a class="signout-link" th:href="@{/logout}">
+            <span aria-hidden="true">↪</span> Sign out
+        </a>
+    </div>
+
+    <script>
+        (function () {
+            function getSectionFromHash() {
+                const hash = window.location.hash.replace('#', '');
+                return ['dashboard', 'profiles', 'interviews'].includes(hash)
+                    ? hash
+                    : 'dashboard';
+            }
+
+            function updateActiveLink(section) {
+                document.querySelectorAll('.sidebar-nav .sidebar-link').forEach(function (link) {
+                    const isActive = link.dataset.section === section;
+                    link.classList.toggle('active', isActive);
+
+                    if (isActive) {
+                        link.setAttribute('aria-current', 'page');
+                    } else {
+                        link.removeAttribute('aria-current');
+                    }
+                });
+            }
+
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('.sidebar-nav .sidebar-link');
+                if (!link) return;
+                updateActiveLink(link.dataset.section);
+            });
+
+            window.addEventListener('hashchange', function () {
+                updateActiveLink(getSectionFromHash());
+            });
+
+            updateActiveLink(getSectionFromHash());
+        })();
+    </script>
+</aside>
+</body>
+</html>

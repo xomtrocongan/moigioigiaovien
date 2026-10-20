@@ -1,0 +1,346 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | TeacherMatch</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #183153;
+            background: #ffffff;
+        }
+
+        .login-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .welcome-panel {
+            width: 48%;
+            padding: 55px 5%;
+            background: #087cf0;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 23px;
+            font-weight: bold;
+        }
+
+        .brand-logo {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: #ff982b;
+            color: #17365d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+        }
+
+        .welcome-content {
+            margin-top: auto;
+            margin-bottom: auto;
+            padding: 60px 0;
+        }
+
+        .welcome-content h1 {
+            font-size: clamp(36px, 4vw, 58px);
+            line-height: 1.35;
+            margin: 0 0 24px;
+        }
+
+        .welcome-content p {
+            color: #dcecff;
+            font-size: 17px;
+            line-height: 1.8;
+        }
+
+        .features {
+            margin-top: 30px;
+            line-height: 2.8;
+        }
+
+        .welcome-footer {
+            color: #c9e2ff;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        .form-panel {
+            width: 52%;
+            padding: 50px 8%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-form-container {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .welcome-badge {
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: 9px;
+            background: #e2f5ed;
+            color: #14816b;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 18px;
+        }
+
+        h2 {
+            margin: 0 0 22px;
+            font-size: 36px;
+        }
+
+        .description {
+            color: #718096;
+            line-height: 1.7;
+            margin-bottom: 28px;
+        }
+
+        .form-group {
+            margin-bottom: 22px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        input,
+        select {
+            width: 100%;
+            height: 50px;
+            padding: 0 15px;
+            border: 1px solid #d8e0e8;
+            border-radius: 9px;
+            background: #ffffff;
+            font-size: 14px;
+            color: #243b53;
+            outline: none;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #087cf0;
+            box-shadow: 0 0 0 3px rgba(8, 124, 240, 0.12);
+        }
+
+        .remember-row {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 6px 0 25px;
+            color: #718096;
+            font-size: 14px;
+        }
+
+        .remember-row input {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+            accent-color: #087cf0;
+        }
+
+        .remember-row label {
+            margin: 0;
+            font-weight: normal;
+        }
+
+        .submit-button {
+            width: 100%;
+            min-height: 52px;
+            border: none;
+            border-radius: 9px;
+            background: #087cf0;
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .submit-button:hover {
+            background: #0668ce;
+        }
+
+        .error-message {
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background: #fff0f0;
+            color: #bd2525;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .login-note {
+            margin-top: 22px;
+            color: #718096;
+            font-size: 12px;
+            line-height: 1.7;
+        }
+
+        @media (max-width: 800px) {
+            .login-container {
+                flex-direction: column;
+            }
+
+            .welcome-panel,
+            .form-panel {
+                width: 100%;
+            }
+
+            .welcome-panel {
+                min-height: 320px;
+                padding: 30px;
+            }
+
+            .welcome-content {
+                padding: 45px 0 20px;
+            }
+
+            .welcome-content h1 {
+                font-size: 36px;
+            }
+
+            .form-panel {
+                padding: 40px 25px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+<div class="login-container">
+
+    <section class="welcome-panel">
+        <div class="brand">
+            <div class="brand-logo">TM</div>
+            <span>TeacherMatch</span>
+        </div>
+
+        <div class="welcome-content">
+            <h1>
+                Right teacher.<br>
+                Right opportunity.
+            </h1>
+
+            <p>
+                Connect profiles, partners, and interview schedules
+                in one workspace.
+            </p>
+
+            <div class="features">
+                <div>01 &nbsp; Diverse talent pool</div>
+                <div>02 &nbsp; Seamless end-to-end workflow</div>
+            </div>
+        </div>
+
+        <div class="welcome-footer">
+            GLOBAL TEACHER RECRUITMENT / VIETNAM
+        </div>
+    </section>
+
+    <main class="form-panel">
+        <div class="login-form-container">
+
+            <div class="welcome-badge">WELCOME BACK</div>
+
+            <h2>Login</h2>
+
+            <p class="description">
+                Please select your designated role to access
+                the appropriate workspace.
+            </p>
+
+            <div class="error-message"
+                 th:if="${error != null}"
+                 th:text="${error}"
+                 role="alert">
+                Invalid username or password.
+            </div>
+
+            <form th:action="@{/login}" method="post">
+
+                <div class="form-group">
+                    <label for="selectedRole">Preview role</label>
+
+                    <select id="selectedRole"
+                            name="selectedRole"
+                            required>
+                        <option value="STAFF">Matching Staff</option>
+                        <option value="ADMIN">Administrator</option>
+                        <option value="TEACHER">Teacher</option>
+                        <option value="PARTNER">Partner</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Email / username</label>
+
+                    <input id="username"
+                           name="username"
+                           type="text"
+                           placeholder="Enter your email or username"
+                           autocomplete="username"
+                           required>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+
+                    <input id="password"
+                           name="password"
+                           type="password"
+                           placeholder="Enter your password"
+                           autocomplete="current-password"
+                           required>
+                </div>
+
+                <div class="remember-row">
+                    <input id="rememberMe"
+                           name="rememberMe"
+                           type="checkbox">
+
+                    <label for="rememberMe">Remember me</label>
+                </div>
+
+                <button class="submit-button" type="submit">
+                    Enter interface
+                </button>
+
+            </form>
+
+            <div class="login-note">
+                Access is restricted to authorized accounts.
+                Select the role associated with your account.
+                Your selected role must match your account permissions.
+            </div>
+
+        </div>
+    </main>
+
+</div>
+</body>
+</html>
