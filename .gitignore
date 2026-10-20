@@ -1,8 +1,8 @@
 .idea/
 *.iml
-target/
+.DS_Store
 out/
+target/
 build/
 .gradle/
-.DS_Store
 .env
