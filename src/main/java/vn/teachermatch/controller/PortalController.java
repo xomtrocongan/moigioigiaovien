@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -204,13 +205,35 @@ public class PortalController {
     // =========================
 
     @GetMapping("/admin")
-    public String admin(Model model, HttpSession session) {
+    public String admin(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "ALL") String level,
+            @RequestParam(defaultValue = "") String date,
+            Model model,
+            HttpSession session) {
         if (!hasRole(session, "ADMIN")) {
             return "redirect:/login";
         }
 
+        String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
+        String normalizedLevel = level.trim().toUpperCase(Locale.ROOT);
+        var logs = store.logs().stream()
+                .filter(entry -> normalizedLevel.equals("ALL")
+                        || entry.getLevel().equalsIgnoreCase(normalizedLevel))
+                .filter(entry -> date.isBlank() || entry.getDate().equals(date))
+                .filter(entry -> normalizedKeyword.isBlank()
+                        || entry.getTime().toLowerCase(Locale.ROOT).contains(normalizedKeyword)
+                        || entry.getLevel().toLowerCase(Locale.ROOT).contains(normalizedKeyword)
+                        || entry.getUsername().toLowerCase(Locale.ROOT).contains(normalizedKeyword)
+                        || entry.getAction().toLowerCase(Locale.ROOT).contains(normalizedKeyword))
+                .toList();
+
         model.addAttribute("users", store.users());
-        model.addAttribute("logs", store.logs());
+        model.addAttribute("logs", logs);
+        model.addAttribute("totalLogs", store.logs().size());
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("selectedLevel", normalizedLevel);
+        model.addAttribute("selectedDate", date);
         model.addAttribute("teachers", store.teachers());
 
         return "admin";

@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import vn.teachermatch.model.AppUser;
 import vn.teachermatch.model.Interview;
+import vn.teachermatch.model.LogEntry;
 import vn.teachermatch.model.TeacherProfile;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,7 @@ public class PortalStore {
     private final Map<String, AppUser> users = new LinkedHashMap<>();
     private final List<TeacherProfile> teachers = new ArrayList<>();
     private final List<Interview> interviews = new ArrayList<>();
-    private final List<String[]> logs = new ArrayList<>();
+    private final List<LogEntry> logs = new ArrayList<>();
 
     // Stores access grants in the form username:teacherId.
     private final Set<String> granted = new HashSet<>();
@@ -478,20 +479,11 @@ public class PortalStore {
     // SYSTEM LOGS
     // =========================
 
-    public List<String[]> logs() {
+    public List<LogEntry> logs() {
         return logs;
     }
 
     public void log(String actor, String action) {
-        logs.add(
-                0,
-                new String[]{
-                        LocalDateTime.now()
-                                .toString()
-                                .replace('T', ' '),
-                        actor,
-                        action
-                }
-        );
+        logs.add(0, new LogEntry(LocalDateTime.now(), "INFO", actor, action));
     }
 }

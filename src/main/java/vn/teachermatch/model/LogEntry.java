@@ -7,19 +7,19 @@ public class LogEntry {
 
     private final LocalDateTime timestamp;
     private final String level;
-    private final String user;
-    private final String event;
+    private final String username;
+    private final String action;
 
     public LogEntry(
             LocalDateTime timestamp,
             String level,
-            String user,
-            String event
+            String username,
+            String action
     ) {
         this.timestamp = timestamp;
         this.level = level;
-        this.user = user;
-        this.event = event;
+        this.username = username;
+        this.action = action;
     }
 
     public LocalDateTime getTimestamp() {
@@ -42,11 +42,11 @@ public class LogEntry {
         return level;
     }
 
-    public String getUser() {
-        return user;
+    public String getUsername() {
+        return username;
     }
 
-    public String getEvent() {
-        return event;
+    public String getAction() {
+        return action;
     }
 }
