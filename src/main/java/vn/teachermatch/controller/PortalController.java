@@ -14,12 +14,18 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.teachermatch.model.AppUser;
 import vn.teachermatch.model.TeacherProfile;
 import vn.teachermatch.service.PortalStore;
+import vn.teachermatch.service.FileStorageService;
+import vn.teachermatch.model.DocumentType;
+import vn.teachermatch.exception.StorageException;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -27,15 +33,14 @@ import java.util.UUID;
 public class PortalController {
 
     private final PortalStore store;
+    private final FileStorageService fileStorageService;
 
     private static final Set<String> ALLOWED_ROLES =
             Set.of("ADMIN", "STAFF", "PARTNER", "TEACHER");
 
-    private static final Path UPLOAD_DIR =
-            Paths.get("uploads").toAbsolutePath().normalize();
-
-    public PortalController(PortalStore store) {
+    public PortalController(PortalStore store, FileStorageService fileStorageService) {
         this.store = store;
+        this.fileStorageService = fileStorageService;
     }
 
     // =========================
@@ -114,7 +119,7 @@ public class PortalController {
     }
 
     @GetMapping("/login")
-    public String login(HttpSession session) {
+    public String login(HttpSession session, Model model) {
         // If already logged in, go to the matching dashboard.
         AppUser user = current(session);
 
@@ -122,6 +127,7 @@ public class PortalController {
             return dashboardFor(user.getRole());
         }
 
+        model.addAttribute("selectedRole", "STAFF");
         return "login";
     }
 
@@ -129,12 +135,18 @@ public class PortalController {
     public String doLogin(
             @RequestParam String username,
             @RequestParam String password,
+            @RequestParam(defaultValue = "") String selectedRole,
             Model model,
             HttpSession session) {
 
         String normalizedUsername = username == null
                 ? ""
                 : username.trim();
+        String normalizedRole = selectedRole == null
+                ? ""
+                : selectedRole.trim().toUpperCase(Locale.ROOT);
+        model.addAttribute("selectedRole", normalizedRole);
+        model.addAttribute("username", normalizedUsername);
 
         if (normalizedUsername.isBlank()
                 || password == null
@@ -148,6 +160,10 @@ public class PortalController {
             return "login";
         }
 
+        if (!ALLOWED_ROLES.contains(normalizedRole)) {
+            model.addAttribute("error", "Please select a valid account role.");
+            return "login";
+        }
         AppUser user = store.authenticate(normalizedUsername, password);
 
         if (user == null) {
@@ -172,6 +188,13 @@ public class PortalController {
             return "login";
         }
 
+        if (!normalizedRole.equalsIgnoreCase(userRole.trim())) {
+            model.addAttribute(
+                    "error",
+                    "The selected role does not match this account. Choose the correct role and try again."
+            );
+            return "login";
+        }
         // Save the authenticated user in the session.
         session.setAttribute("user", user);
 
@@ -204,13 +227,35 @@ public class PortalController {
     // =========================
 
     @GetMapping("/admin")
-    public String admin(Model model, HttpSession session) {
+    public String admin(
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "ALL") String level,
+            @RequestParam(defaultValue = "") String date,
+            Model model,
+            HttpSession session) {
         if (!hasRole(session, "ADMIN")) {
             return "redirect:/login";
         }
 
+        String normalizedKeyword = keyword.trim().toLowerCase(Locale.ROOT);
+        String normalizedLevel = level.trim().toUpperCase(Locale.ROOT);
+        var logs = store.logs().stream()
+                .filter(entry -> normalizedLevel.equals("ALL")
+                        || entry.getLevel().equalsIgnoreCase(normalizedLevel))
+                .filter(entry -> date.isBlank() || entry.getDate().equals(date))
+                .filter(entry -> normalizedKeyword.isBlank()
+                        || entry.getTime().toLowerCase(Locale.ROOT).contains(normalizedKeyword)
+                        || entry.getLevel().toLowerCase(Locale.ROOT).contains(normalizedKeyword)
+                        || entry.getUsername().toLowerCase(Locale.ROOT).contains(normalizedKeyword)
+                        || entry.getAction().toLowerCase(Locale.ROOT).contains(normalizedKeyword))
+                .toList();
+
         model.addAttribute("users", store.users());
-        model.addAttribute("logs", store.logs());
+        model.addAttribute("logs", logs);
+        model.addAttribute("totalLogs", store.logs().size());
+        model.addAttribute("keyword", keyword);
+        model.addAttribute("selectedLevel", normalizedLevel);
+        model.addAttribute("selectedDate", date);
         model.addAttribute("teachers", store.teachers());
 
         return "admin";
@@ -259,6 +304,7 @@ public class PortalController {
 
         model.addAttribute("teachers", store.teachers());
         model.addAttribute("interviews", store.interviews());
+        model.addAttribute("partners", store.partners());
 
         return "staff";
     }
@@ -347,14 +393,26 @@ public class PortalController {
             return "redirect:/partner#interviews";
         }
 
-        // Preserve the current demo partner mapping.
-        // A multi-partner system should use the authenticated
-        // partner's actual organization instead of a fixed name.
-        store.requestInterview(
-                id,
-                "Bright English Center",
-                dateTime
-        );
+        try {
+            if (!LocalDateTime.parse(dateTime).isAfter(LocalDateTime.now())) {
+                return "redirect:/partner#interviews";
+            }
+        } catch (DateTimeParseException exception) {
+            return "redirect:/partner#interviews";
+        }
+
+        String partnerUsername = username(session);
+        if (!store.canPartnerAccessTeacher(partnerUsername, id)) {
+            return "redirect:/partner#interviews";
+        }
+
+        AppUser partner = current(session);
+        String partnerName = partner.getFullName();
+        if (partnerName == null || partnerName.isBlank()) {
+            partnerName = partnerUsername;
+        }
+
+        store.requestInterview(id, partnerName, dateTime);
 
         return "redirect:/partner#interviews";
     }
@@ -370,7 +428,7 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        store.updateInterview(id, null, result, feedback);
+        store.updatePartnerFeedback(id, username(session), result, feedback);
 
         return "redirect:/partner#interviews";
     }
@@ -385,7 +443,7 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        model.addAttribute("teacher", store.teacher(1));
+        model.addAttribute("teacher", store.teacherForUser(username(session)));
 
         model.addAttribute(
                 "interviews",
@@ -409,19 +467,32 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        TeacherProfile teacher = store.teacher(1);
+        TeacherProfile teacher = store.teacherForUser(username(session));
 
         if (teacher == null) {
             return "redirect:/teacher";
         }
 
-        teacher.setName(name);
-        teacher.setEmail(email);
+        String normalizedName = name == null ? "" : name.trim();
+        String normalizedEmail = email == null ? "" : email.trim();
+        if (normalizedName.isBlank()
+                || !normalizedEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+                || store.teacherEmailInUse(normalizedEmail, teacher.getId())) {
+            return "redirect:/teacher";
+        }
+
+        teacher.setName(normalizedName);
+        teacher.setEmail(normalizedEmail);
+        AppUser user = current(session);
+        if (user != null) {
+            user.setFullName(normalizedName);
+        }
         teacher.setNationality(nationality);
         teacher.setLocation(location);
         teacher.setExperience(experience);
         teacher.setQualification(qualification);
 
+        store.updateTeacherNameInInterviews(teacher.getId(), normalizedName);
         store.log(username(session), "Updated teacher profile");
 
         return "redirect:/teacher";
@@ -437,70 +508,80 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        if (file == null || file.isEmpty()) {
-            return "redirect:/teacher";
-        }
-
-        String originalFilename = file.getOriginalFilename();
-
-        if (originalFilename == null || originalFilename.isBlank()) {
-            return "redirect:/teacher";
-        }
-
-        Files.createDirectories(UPLOAD_DIR);
-
-        String safeFilename = UUID.randomUUID()
-                + "_"
-                + Paths.get(originalFilename).getFileName();
-
-        Path destination = UPLOAD_DIR.resolve(safeFilename).normalize();
-
-        if (!destination.startsWith(UPLOAD_DIR)) {
-            return "redirect:/teacher";
-        }
-
-        Files.copy(
-                file.getInputStream(),
-                destination,
-                StandardCopyOption.REPLACE_EXISTING
-        );
-
-        TeacherProfile teacher = store.teacher(1);
-
+        TeacherProfile teacher = store.teacherForUser(username(session));
         if (teacher == null) {
-            Files.deleteIfExists(destination);
             return "redirect:/teacher";
         }
 
-        if ("Video".equalsIgnoreCase(documentType)) {
-            teacher.setVideoUrl("/uploads/" + safeFilename);
-        } else {
-            teacher.setCvUrl("/uploads/" + safeFilename);
+        DocumentType docType = DocumentType.fromString(documentType).orElse(null);
+        if (docType == null) {
+            return "redirect:/teacher";
         }
 
-        store.log(username(session), "Uploaded " + documentType);
+        String oldUrl = switch (docType) {
+            case CV -> teacher.getCvUrl();
+            case CERTIFICATE -> teacher.getCertificateUrl();
+            case VIDEO -> teacher.getVideoUrl();
+        };
 
+        String newUrl;
+        try {
+            newUrl = fileStorageService.storeFile(file, docType);
+        } catch (StorageException exc) {
+            return "redirect:/teacher";
+        }
+
+        switch (docType) {
+            case CV -> teacher.setCvUrl(newUrl);
+            case CERTIFICATE -> teacher.setCertificateUrl(newUrl);
+            case VIDEO -> teacher.setVideoUrl(newUrl);
+        }
+
+        if (oldUrl != null && !oldUrl.isBlank()) {
+            fileStorageService.deletePreviousFile(oldUrl);
+        }
+
+        store.log(username(session), "Uploaded " + docType.getLabel());
         return "redirect:/teacher";
     }
 
     @GetMapping("/uploads/{filename:.+}")
     @ResponseBody
     public ResponseEntity<Resource> uploadedFile(
-            @PathVariable String filename) throws IOException {
+            @PathVariable String filename,
+            HttpSession session) throws IOException {
 
-        Path filePath = UPLOAD_DIR.resolve(filename).normalize();
-
-        // Do not allow a request to read files outside uploads/.
-        if (!filePath.startsWith(UPLOAD_DIR)
-                || !Files.exists(filePath)
-                || !Files.isRegularFile(filePath)) {
-
+        if (!hasRole(session, "ADMIN", "STAFF", "PARTNER", "TEACHER")) {
             return ResponseEntity.notFound().build();
         }
 
-        Resource resource = new UrlResource(filePath.toUri());
+        String fileUrl = "/uploads/" + filename;
+        TeacherProfile teacher = store.teachers().stream()
+                .filter(profile -> fileUrl.equals(profile.getCvUrl())
+                        || fileUrl.equals(profile.getCertificateUrl())
+                        || fileUrl.equals(profile.getVideoUrl()))
+                .findFirst()
+                .orElse(null);
 
-        if (!resource.exists() || !resource.isReadable()) {
+        if (teacher == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (hasRole(session, "PARTNER")
+                && !store.canPartnerAccessTeacher(username(session), teacher.getId())) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Prevent IDOR: Teachers can only view/download their own uploaded files
+        if (hasRole(session, "TEACHER")) {
+            Long currentTeacherId = store.teacherIdForUser(username(session));
+            if (currentTeacherId == null || currentTeacherId != teacher.getId()) {
+                return ResponseEntity.notFound().build();
+            }
+        }
+
+        Resource resource = fileStorageService.loadAsResource(filename);
+        if (resource == null) {
             return ResponseEntity.notFound().build();
         }
 
@@ -519,7 +600,11 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        store.updateInterview(id, status, null, null);
+        Long teacherId = store.teacherIdForUser(username(session));
+        if (teacherId == null) {
+            return "redirect:/teacher";
+        }
+        store.updateTeacherInterview(id, teacherId, status);
 
         return "redirect:/teacher";
     }

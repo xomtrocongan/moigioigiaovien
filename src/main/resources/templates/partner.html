@@ -20,7 +20,6 @@
         .partner-eyebrow{margin:0 0 12px;color:#8a9fbd;font-size:11px;font-weight:800;letter-spacing:1.7px}
         .partner-welcome h2{margin:0 0 10px;font-size:24px;color:#203454}
         .partner-welcome p:last-child{margin:0;color:#7d8da8;line-height:1.6}
-        .partner-welcome-mark{color:#72aaff;font-size:42px;line-height:1}
         .partner-panel{margin-bottom:24px;padding:26px;border:1px solid #e3eaf4;border-radius:16px;background:#fff}
         .partner-panel-head{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:22px}
         .partner-panel-head h2{margin:0 0 7px;font-size:20px}
@@ -54,7 +53,7 @@
 </head>
 <body>
 <div class="partner-layout">
-    <div th:replace="~{fragments :: sidebar('dashboard')}"></div>
+    <div th:replace="~{fragments :: sidebar('partner', 'dashboard')}"></div>
 
     <main class="partner-main">
         <header class="partner-topbar">
@@ -63,7 +62,7 @@
                 <h1 class="partner-title">Shared profiles</h1>
             </div>
             <div class="partner-user">
-                <div class="partner-avatar">BE</div>
+                <div class="partner-avatar" th:text="${user != null and user.fullName != null and !user.fullName.isBlank() ? #strings.substring(user.fullName,0,1).toUpperCase() : 'P'}">P</div>
                 <div>
                     <strong th:text="${user != null and user.fullName != null ? user.fullName : 'Hiring Partner'}">Bright English Center</strong>
                     <small>Hiring partner</small>
@@ -77,7 +76,6 @@
                 <h2>Meet your next great teacher.</h2>
                 <p>Review candidate profiles, explore documents and request an interview in a few clicks.</p>
             </div>
-            <span class="partner-welcome-mark" aria-hidden="true">✦</span>
         </section>
 
         <section id="profiles" class="partner-panel">
@@ -123,6 +121,7 @@
                            th:href="${teacher.cvUrl}" target="_blank" rel="noopener">View CV ↗</a>
                         <span th:unless="${teacher.cvUrl != null and !teacher.cvUrl.isEmpty()}" class="partner-muted">CV not uploaded</span>
 
+                        <a th:if="${teacher.certificateUrl != null and !teacher.certificateUrl.isEmpty()}" th:href="${teacher.certificateUrl}" target="_blank" rel="noopener">View certificate ↗</a><span th:unless="${teacher.certificateUrl != null and !teacher.certificateUrl.isEmpty()}" class="partner-muted">Certificate not uploaded</span>
                         <a th:if="${teacher.videoUrl != null and !teacher.videoUrl.isEmpty()}"
                            th:href="${teacher.videoUrl}" target="_blank" rel="noopener">Demo video ↗</a>
                         <span th:unless="${teacher.videoUrl != null and !teacher.videoUrl.isEmpty()}" class="partner-muted">Video not uploaded</span>
@@ -178,9 +177,15 @@
                         </td>
                         <td>
                             <form th:action="@{/partner/feedback/{id}(id=${interview.id})}" method="post">
+                                <select class="partner-feedback" name="result" required>
+                                    <option value="" disabled th:selected="${interview.result == null or interview.result.isBlank()}">Select result</option>
+                                    <option value="Pending review" th:selected="${interview.result == 'Pending review'}">Pending review</option>
+                                    <option value="Qualified" th:selected="${interview.result == 'Qualified'}">Qualified</option>
+                                    <option value="Rejected" th:selected="${interview.result == 'Rejected'}">Rejected</option>
+                                </select>
                                 <input class="partner-feedback" type="text" name="feedback"
-                                       placeholder="Add feedback or result"
-                                       th:value="${interview.feedback}">
+                                       placeholder="Add feedback"
+                                       th:value="${interview.feedback}" required>
                                 <button class="partner-inline-button" type="submit">Save</button>
                             </form>
                         </td>
