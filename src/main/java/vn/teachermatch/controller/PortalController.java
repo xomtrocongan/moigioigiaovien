@@ -20,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
@@ -370,14 +372,26 @@ public class PortalController {
             return "redirect:/partner#interviews";
         }
 
-        // Preserve the current demo partner mapping.
-        // A multi-partner system should use the authenticated
-        // partner's actual organization instead of a fixed name.
-        store.requestInterview(
-                id,
-                "Bright English Center",
-                dateTime
-        );
+        try {
+            if (!LocalDateTime.parse(dateTime).isAfter(LocalDateTime.now())) {
+                return "redirect:/partner#interviews";
+            }
+        } catch (DateTimeParseException exception) {
+            return "redirect:/partner#interviews";
+        }
+
+        String partnerUsername = username(session);
+        if (!store.canPartnerAccessTeacher(partnerUsername, id)) {
+            return "redirect:/partner#interviews";
+        }
+
+        AppUser partner = current(session);
+        String partnerName = partner.getFullName();
+        if (partnerName == null || partnerName.isBlank()) {
+            partnerName = partnerUsername;
+        }
+
+        store.requestInterview(id, partnerName, dateTime);
 
         return "redirect:/partner#interviews";
     }
@@ -393,7 +407,7 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        store.updateInterview(id, null, result, feedback);
+        store.updatePartnerFeedback(id, username(session), result, feedback);
 
         return "redirect:/partner#interviews";
     }
@@ -438,8 +452,19 @@ public class PortalController {
             return "redirect:/teacher";
         }
 
-        teacher.setName(name);
-        teacher.setEmail(email);
+        String normalizedName = name == null ? "" : name.trim();
+        String normalizedEmail = email == null ? "" : email.trim();
+        if (normalizedName.isBlank()
+                || !normalizedEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+            return "redirect:/teacher";
+        }
+
+        teacher.setName(normalizedName);
+        teacher.setEmail(normalizedEmail);
+        AppUser user = current(session);
+        if (user != null) {
+            user.setFullName(normalizedName);
+        }
         teacher.setNationality(nationality);
         teacher.setLocation(location);
         teacher.setExperience(experience);
@@ -470,11 +495,26 @@ public class PortalController {
             return "redirect:/teacher";
         }
 
+        String normalizedType = documentType == null
+                ? ""
+                : documentType.trim().toUpperCase(Locale.ROOT);
+        Set<String> allowedExtensions = switch (normalizedType) {
+            case "CV" -> Set.of(".pdf", ".doc", ".docx");
+            case "CERTIFICATE" -> Set.of(".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png");
+            case "VIDEO" -> Set.of(".mp4", ".mov", ".webm");
+            default -> Set.of();
+        };
+        String fileName = Paths.get(originalFilename).getFileName().toString();
+        int extensionStart = fileName.lastIndexOf('.');
+        String extension = extensionStart < 0
+                ? ""
+                : fileName.substring(extensionStart).toLowerCase(Locale.ROOT);
+        if (!allowedExtensions.contains(extension)) {
+            return "redirect:/teacher";
+        }
         Files.createDirectories(UPLOAD_DIR);
 
-        String safeFilename = UUID.randomUUID()
-                + "_"
-                + Paths.get(originalFilename).getFileName();
+        String safeFilename = UUID.randomUUID() + "_" + fileName;
 
         Path destination = UPLOAD_DIR.resolve(safeFilename).normalize();
 
@@ -495,10 +535,12 @@ public class PortalController {
             return "redirect:/teacher";
         }
 
-        if ("Video".equalsIgnoreCase(documentType)) {
-            teacher.setVideoUrl("/uploads/" + safeFilename);
-        } else {
-            teacher.setCvUrl("/uploads/" + safeFilename);
+        String fileUrl = "/uploads/" + safeFilename;
+        switch (normalizedType) {
+            case "CV" -> teacher.setCvUrl(fileUrl);
+            case "CERTIFICATE" -> teacher.setCertificateUrl(fileUrl);
+            case "VIDEO" -> teacher.setVideoUrl(fileUrl);
+            default -> throw new IllegalStateException("Unsupported document type");
         }
 
         store.log(username(session), "Uploaded " + documentType);
@@ -509,8 +551,24 @@ public class PortalController {
     @GetMapping("/uploads/{filename:.+}")
     @ResponseBody
     public ResponseEntity<Resource> uploadedFile(
-            @PathVariable String filename) throws IOException {
+            @PathVariable String filename,
+            HttpSession session) throws IOException {
 
+        if (!hasRole(session, "ADMIN", "STAFF", "PARTNER", "TEACHER")) {
+            return ResponseEntity.notFound().build();
+        }
+
+        TeacherProfile teacher = store.teacher(1);
+        String fileUrl = "/uploads/" + filename;
+        boolean isLinkedDocument = teacher != null
+                && (fileUrl.equals(teacher.getCvUrl())
+                        || fileUrl.equals(teacher.getCertificateUrl())
+                        || fileUrl.equals(teacher.getVideoUrl()));
+        if (!isLinkedDocument
+                || (hasRole(session, "PARTNER")
+                        && !store.canPartnerAccessTeacher(username(session), 1))) {
+            return ResponseEntity.notFound().build();
+        }
         Path filePath = UPLOAD_DIR.resolve(filename).normalize();
 
         // Do not allow a request to read files outside uploads/.
@@ -542,7 +600,7 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        store.updateInterview(id, status, null, null);
+        store.updateTeacherInterview(id, 1, status);
 
         return "redirect:/teacher";
     }

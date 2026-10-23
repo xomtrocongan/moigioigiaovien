@@ -14,6 +14,7 @@ public class TeacherProfile {
     private String status;
     private String videoUrl;
     private String cvUrl;
+    private String certificateUrl;
     private String subject;
     private String bio;
 
@@ -40,6 +41,7 @@ public class TeacherProfile {
         this.status = status;
         this.videoUrl = videoUrl;
         this.cvUrl = cvUrl;
+        this.certificateUrl = "";
         this.subject = "";
         this.bio = "";
     }
@@ -128,6 +130,14 @@ public class TeacherProfile {
 
     public void setCvUrl(String cvUrl) {
         this.cvUrl = cvUrl;
+    }
+
+    public String getCertificateUrl() {
+        return certificateUrl;
+    }
+
+    public void setCertificateUrl(String certificateUrl) {
+        this.certificateUrl = certificateUrl;
     }
 
     public String getSubject() {

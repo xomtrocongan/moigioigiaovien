@@ -9,5 +9,5 @@ public class AppUser {
         this.username=username; this.password=password; this.role=role; this.fullName=fullName;
     }
     public String getUsername(){return username;} public String getPassword(){return password;}
-    public String getRole(){return role;} public String getFullName(){return fullName;}
+    public String getRole(){return role;} public String getFullName(){return fullName;} public void setFullName(String fullName){this.fullName=fullName;}
 }

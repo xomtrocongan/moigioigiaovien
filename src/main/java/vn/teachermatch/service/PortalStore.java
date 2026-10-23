@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
@@ -293,7 +294,12 @@ public class PortalStore {
             return;
         }
 
-        teacher.setStatus(status);
+        String normalizedStatus = status.trim().toUpperCase(Locale.ROOT);
+        if (!Set.of("PENDING", "READY", "REJECTED").contains(normalizedStatus)) {
+            return;
+        }
+
+        teacher.setStatus(normalizedStatus);
 
         log(
                 "STAFF",
@@ -400,17 +406,27 @@ public class PortalStore {
             String feedback) {
 
         Interview interview = findInterview(id);
-
         if (interview == null) {
             return;
         }
 
-        if (status != null && !status.isBlank()) {
-            interview.setStatus(status);
+        String normalizedStatus = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
+        String normalizedResult = result == null ? "" : result.trim();
+        if ((!normalizedStatus.isBlank()
+                        && !Set.of("PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "DECLINED")
+                                .contains(normalizedStatus))
+                || (!normalizedResult.isBlank()
+                        && !Set.of("Not reviewed", "Pending review", "Qualified", "Rejected")
+                                .contains(normalizedResult))) {
+            return;
         }
 
-        if (result != null && !result.isBlank()) {
-            interview.setResult(result);
+        if (!normalizedStatus.isBlank()) {
+            interview.setStatus(normalizedStatus);
+        }
+
+        if (!normalizedResult.isBlank()) {
+            interview.setResult(normalizedResult);
         }
 
         if (feedback != null) {
@@ -429,7 +445,8 @@ public class PortalStore {
             String feedback) {
 
         if (username == null || result == null || result.isBlank()
-                || feedback == null || feedback.isBlank()) {
+                || feedback == null || feedback.isBlank()
+                || !Set.of("Pending review", "Qualified", "Rejected").contains(result)) {
             return false;
         }
 
@@ -465,6 +482,26 @@ public class PortalStore {
                         + ": " + result
         );
 
+        return true;
+    }
+
+    public boolean updateTeacherInterview(
+            long interviewId,
+            long teacherId,
+            String status) {
+
+        if (status == null
+                || !(status.equalsIgnoreCase("CONFIRMED")
+                        || status.equalsIgnoreCase("DECLINED"))) {
+            return false;
+        }
+
+        Interview interview = findInterview(interviewId);
+        if (interview == null || interview.getTeacherId() != teacherId) {
+            return false;
+        }
+
+        updateInterview(interviewId, status, null, null);
         return true;
     }
 
