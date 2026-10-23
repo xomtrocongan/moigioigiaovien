@@ -632,15 +632,15 @@
 
                     <tbody>
                     <tr th:each="entry : ${logs}">
-                        <td th:text="${entry.timestamp}">2026-10-20 10:30</td>
+                        <td th:text="${entry.time}">2026-10-20 10:30</td>
                         <td>
                             <span class="level-badge"
                                   th:text="${entry.level}">
                                 INFO
                             </span>
                         </td>
-                        <td th:text="${entry.username}">admin</td>
-                        <td th:text="${entry.action}">Logged in</td>
+                        <td th:text="${entry.user}">admin</td>
+                        <td th:text="${entry.event}">Logged in</td>
                     </tr>
 
                     <tr th:if="${logs == null or #lists.isEmpty(logs)}">
