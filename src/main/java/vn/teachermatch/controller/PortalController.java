@@ -14,6 +14,9 @@ import org.springframework.web.multipart.MultipartFile;
 import vn.teachermatch.model.AppUser;
 import vn.teachermatch.model.TeacherProfile;
 import vn.teachermatch.service.PortalStore;
+import vn.teachermatch.service.FileStorageService;
+import vn.teachermatch.model.DocumentType;
+import vn.teachermatch.exception.StorageException;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -30,15 +33,14 @@ import java.util.UUID;
 public class PortalController {
 
     private final PortalStore store;
+    private final FileStorageService fileStorageService;
 
     private static final Set<String> ALLOWED_ROLES =
             Set.of("ADMIN", "STAFF", "PARTNER", "TEACHER");
 
-    private static final Path UPLOAD_DIR =
-            Paths.get("uploads").toAbsolutePath().normalize();
-
-    public PortalController(PortalStore store) {
+    public PortalController(PortalStore store, FileStorageService fileStorageService) {
         this.store = store;
+        this.fileStorageService = fileStorageService;
     }
 
     // =========================
@@ -490,6 +492,7 @@ public class PortalController {
         teacher.setExperience(experience);
         teacher.setQualification(qualification);
 
+        store.updateTeacherNameInInterviews(teacher.getId(), normalizedName);
         store.log(username(session), "Updated teacher profile");
 
         return "redirect:/teacher";
@@ -505,66 +508,40 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        if (file == null || file.isEmpty()) {
-            return "redirect:/teacher";
-        }
-
-        String originalFilename = file.getOriginalFilename();
-
-        if (originalFilename == null || originalFilename.isBlank()) {
-            return "redirect:/teacher";
-        }
-
-        String normalizedType = documentType == null
-                ? ""
-                : documentType.trim().toUpperCase(Locale.ROOT);
-        Set<String> allowedExtensions = switch (normalizedType) {
-            case "CV" -> Set.of(".pdf", ".doc", ".docx");
-            case "CERTIFICATE" -> Set.of(".pdf", ".doc", ".docx", ".jpg", ".jpeg", ".png");
-            case "VIDEO" -> Set.of(".mp4", ".mov", ".webm");
-            default -> Set.of();
-        };
-        String fileName = Paths.get(originalFilename).getFileName().toString();
-        int extensionStart = fileName.lastIndexOf('.');
-        String extension = extensionStart < 0
-                ? ""
-                : fileName.substring(extensionStart).toLowerCase(Locale.ROOT);
-        if (!allowedExtensions.contains(extension)) {
-            return "redirect:/teacher";
-        }
-        Files.createDirectories(UPLOAD_DIR);
-
-        String safeFilename = UUID.randomUUID() + "_" + fileName;
-
-        Path destination = UPLOAD_DIR.resolve(safeFilename).normalize();
-
-        if (!destination.startsWith(UPLOAD_DIR)) {
-            return "redirect:/teacher";
-        }
-
-        Files.copy(
-                file.getInputStream(),
-                destination,
-                StandardCopyOption.REPLACE_EXISTING
-        );
-
         TeacherProfile teacher = store.teacherForUser(username(session));
-
         if (teacher == null) {
-            Files.deleteIfExists(destination);
             return "redirect:/teacher";
         }
 
-        String fileUrl = "/uploads/" + safeFilename;
-        switch (normalizedType) {
-            case "CV" -> teacher.setCvUrl(fileUrl);
-            case "CERTIFICATE" -> teacher.setCertificateUrl(fileUrl);
-            case "VIDEO" -> teacher.setVideoUrl(fileUrl);
-            default -> throw new IllegalStateException("Unsupported document type");
+        DocumentType docType = DocumentType.fromString(documentType).orElse(null);
+        if (docType == null) {
+            return "redirect:/teacher";
         }
 
-        store.log(username(session), "Uploaded " + documentType);
+        String oldUrl = switch (docType) {
+            case CV -> teacher.getCvUrl();
+            case CERTIFICATE -> teacher.getCertificateUrl();
+            case VIDEO -> teacher.getVideoUrl();
+        };
 
+        String newUrl;
+        try {
+            newUrl = fileStorageService.storeFile(file, docType);
+        } catch (StorageException exc) {
+            return "redirect:/teacher";
+        }
+
+        switch (docType) {
+            case CV -> teacher.setCvUrl(newUrl);
+            case CERTIFICATE -> teacher.setCertificateUrl(newUrl);
+            case VIDEO -> teacher.setVideoUrl(newUrl);
+        }
+
+        if (oldUrl != null && !oldUrl.isBlank()) {
+            fileStorageService.deletePreviousFile(oldUrl);
+        }
+
+        store.log(username(session), "Uploaded " + docType.getLabel());
         return "redirect:/teacher";
     }
 
@@ -585,24 +562,26 @@ public class PortalController {
                         || fileUrl.equals(profile.getVideoUrl()))
                 .findFirst()
                 .orElse(null);
-        if (teacher == null
-                || (hasRole(session, "PARTNER")
-                        && !store.canPartnerAccessTeacher(username(session), teacher.getId()))) {
-            return ResponseEntity.notFound().build();
-        }
-        Path filePath = UPLOAD_DIR.resolve(filename).normalize();
 
-        // Do not allow a request to read files outside uploads/.
-        if (!filePath.startsWith(UPLOAD_DIR)
-                || !Files.exists(filePath)
-                || !Files.isRegularFile(filePath)) {
-
+        if (teacher == null) {
             return ResponseEntity.notFound().build();
         }
 
-        Resource resource = new UrlResource(filePath.toUri());
+        if (hasRole(session, "PARTNER")
+                && !store.canPartnerAccessTeacher(username(session), teacher.getId())) {
+            return ResponseEntity.notFound().build();
+        }
 
-        if (!resource.exists() || !resource.isReadable()) {
+        // Prevent IDOR: Teachers can only view/download their own uploaded files
+        if (hasRole(session, "TEACHER")) {
+            Long currentTeacherId = store.teacherIdForUser(username(session));
+            if (currentTeacherId == null || currentTeacherId != teacher.getId()) {
+                return ResponseEntity.notFound().build();
+            }
+        }
+
+        Resource resource = fileStorageService.loadAsResource(filename);
+        if (resource == null) {
             return ResponseEntity.notFound().build();
         }
 

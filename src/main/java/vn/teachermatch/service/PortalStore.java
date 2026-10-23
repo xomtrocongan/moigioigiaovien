@@ -1,34 +1,28 @@
 package vn.teachermatch.service;
 
 import org.springframework.stereotype.Service;
-
 import vn.teachermatch.model.AppUser;
 import vn.teachermatch.model.Interview;
 import vn.teachermatch.model.LogEntry;
 import vn.teachermatch.model.TeacherProfile;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
 public class PortalStore {
 
-    private final Map<String, AppUser> users = new LinkedHashMap<>();
-    private final Map<String, Long> teacherAccounts = new LinkedHashMap<>();
-    private final List<TeacherProfile> teachers = new ArrayList<>();
-    private final List<Interview> interviews = new ArrayList<>();
-    private final List<LogEntry> logs = new ArrayList<>();
+    private final Map<String, AppUser> users = new ConcurrentHashMap<>();
+    private final Map<String, Long> teacherAccounts = new ConcurrentHashMap<>();
+    private final List<TeacherProfile> teachers = new CopyOnWriteArrayList<>();
+    private final List<Interview> interviews = new CopyOnWriteArrayList<>();
+    private final List<LogEntry> logs = new CopyOnWriteArrayList<>();
 
-    // Stores access grants in the form username:teacherId.
-    private final Set<String> granted = new HashSet<>();
+    // Stores access grants in the form "username:teacherId" thread-safely
+    private final Set<String> granted = ConcurrentHashMap.newKeySet();
 
     private final AtomicLong interviewIds = new AtomicLong(3);
     private final AtomicLong teacherIds = new AtomicLong(3);
@@ -38,92 +32,31 @@ public class PortalStore {
                 .withHour(10).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime secondInterviewTime = LocalDateTime.now().plusDays(3)
                 .withHour(14).withMinute(30).withSecond(0).withNano(0);
+
         // Demo accounts
-        users.put(
-                "admin",
-                new AppUser(
-                        "admin",
-                        "admin123",
-                        "ADMIN",
-                        "System Administrator"
-                )
-        );
-
-        users.put(
-                "staff",
-                new AppUser(
-                        "staff",
-                        "staff123",
-                        "STAFF",
-                        "Matching Staff"
-                )
-        );
-
-        users.put(
-                "partner",
-                new AppUser(
-                        "partner",
-                        "partner123",
-                        "PARTNER",
-                        "Bright English Center"
-                )
-        );
-
-        users.put(
-                "teacher",
-                new AppUser(
-                        "teacher",
-                        "teacher123",
-                        "TEACHER",
-                        "Emily Martin"
-                )
-        );
+        users.put("admin", new AppUser("admin", "admin123", "ADMIN", "System Administrator"));
+        users.put("staff", new AppUser("staff", "staff123", "STAFF", "Matching Staff"));
+        users.put("partner", new AppUser("partner", "partner123", "PARTNER", "Bright English Center"));
+        users.put("teacher", new AppUser("teacher", "teacher123", "TEACHER", "Emily Martin"));
 
         // Demo teacher profiles
-        teachers.add(
-                new TeacherProfile(
-                        1,
-                        "Emily Martin",
-                        "emily.martin@example.com",
-                        "American",
-                        "Ho Chi Minh City",
-                        "5 years",
-                        "TEFL, Bachelor's degree",
-                        "READY",
-                        "",
-                        ""
-                )
-        );
+        teachers.add(new TeacherProfile(
+                1, "Emily Martin", "emily.martin@example.com", "American",
+                "Ho Chi Minh City", "5 years", "TEFL, Bachelor's degree",
+                "READY", "", ""
+        ));
 
-        teachers.add(
-                new TeacherProfile(
-                        2,
-                        "Daniel Walker",
-                        "daniel.walker@example.com",
-                        "British",
-                        "Hanoi",
-                        "3 years",
-                        "CELTA",
-                        "READY",
-                        "",
-                        ""
-                )
-        );
+        teachers.add(new TeacherProfile(
+                2, "Daniel Walker", "daniel.walker@example.com", "British",
+                "Hanoi", "3 years", "CELTA",
+                "READY", "", ""
+        ));
 
-        teachers.add(
-                new TeacherProfile(
-                        3,
-                        "Sarah Thompson",
-                        "sarah.thompson@example.com",
-                        "Australian",
-                        "Da Nang",
-                        "7 years",
-                        "TESOL, Master's degree",
-                        "PENDING",
-                        "",
-                        ""
-                )
-        );
+        teachers.add(new TeacherProfile(
+                3, "Sarah Thompson", "sarah.thompson@example.com", "Australian",
+                "Da Nang", "7 years", "TESOL, Master's degree",
+                "PENDING", "", ""
+        ));
 
         teacherAccounts.put("teacher", 1L);
 
@@ -132,33 +65,15 @@ public class PortalStore {
         granted.add("partner:2");
 
         // Demo interviews
-        interviews.add(
-                new Interview(
-                        1,
-                        1,
-                        "Emily Martin",
-                        "Bright English Center",
-                        firstInterviewTime.toString(),
-                        "PENDING",
-                        "Not reviewed",
-                        "",
-                        ""
-                )
-        );
+        interviews.add(new Interview(
+                1, 1, "Emily Martin", "Bright English Center",
+                firstInterviewTime.toString(), "PENDING", "Not reviewed", "", ""
+        ));
 
-        interviews.add(
-                new Interview(
-                        2,
-                        2,
-                        "Daniel Walker",
-                        "Bright English Center",
-                        secondInterviewTime.toString(),
-                        "CONFIRMED",
-                        "Not reviewed",
-                        "",
-                        ""
-                )
-        );
+        interviews.add(new Interview(
+                2, 2, "Daniel Walker", "Bright English Center",
+                secondInterviewTime.toString(), "CONFIRMED", "Not reviewed", "", ""
+        ));
 
         log("SYSTEM", "Seed data loaded");
     }
@@ -182,7 +97,8 @@ public class PortalStore {
     }
 
     public String userRole(String username) {
-        AppUser user = users.get(username);
+        if (username == null) return null;
+        AppUser user = users.get(username.trim());
         return user == null ? null : user.getRole();
     }
 
@@ -217,7 +133,6 @@ public class PortalStore {
         return user;
     }
 
-
     public void addUser(String username, String password, String role) {
         if (username == null || username.isBlank()
                 || password == null || password.isBlank()
@@ -225,28 +140,21 @@ public class PortalStore {
             return;
         }
 
-        if (users.containsKey(username)) {
+        String trimmedUser = username.trim();
+        if (users.containsKey(trimmedUser)) {
             return;
         }
 
-        users.put(
-                username,
-                new AppUser(
-                        username,
-                        password,
-                        role,
-                        username
-                )
-        );
+        users.put(trimmedUser, new AppUser(trimmedUser, password, role, trimmedUser));
 
         if ("TEACHER".equalsIgnoreCase(role.trim())) {
             long teacherId = teacherIds.incrementAndGet();
             teachers.add(new TeacherProfile(
-                    teacherId, username.trim(), "", "", "", "", "", "PENDING", "", ""));
-            teacherAccounts.put(username.trim(), teacherId);
+                    teacherId, trimmedUser, "", "", "", "", "", "PENDING", "", ""));
+            teacherAccounts.put(trimmedUser, teacherId);
         }
 
-        log("ADMIN", "Created account " + username);
+        log("ADMIN", "Created account " + trimmedUser);
     }
 
     // =========================
@@ -259,10 +167,11 @@ public class PortalStore {
 
     public TeacherProfile teacher(long id) {
         return teachers.stream()
-                .filter(teacher -> teacher.getId() == id)
+                .filter(t -> t.getId() == id)
                 .findFirst()
                 .orElse(null);
     }
+
     public Long teacherIdForUser(String username) {
         return username == null ? null : teacherAccounts.get(username.trim());
     }
@@ -272,41 +181,31 @@ public class PortalStore {
             return false;
         }
         return teachers.stream()
-                .anyMatch(teacher -> teacher.getId() != exceptTeacherId
-                        && teacher.getEmail() != null
-                        && teacher.getEmail().equalsIgnoreCase(email.trim()));
+                .anyMatch(t -> t.getId() != exceptTeacherId
+                        && t.getEmail() != null
+                        && t.getEmail().equalsIgnoreCase(email.trim()));
     }
+
     public TeacherProfile teacherForUser(String username) {
         Long teacherId = teacherIdForUser(username);
         return teacherId == null ? null : teacher(teacherId);
     }
 
-    public List<TeacherProfile> visibleTeachers(
-            String username,
-            String role) {
-
+    public List<TeacherProfile> visibleTeachers(String username, String role) {
         if ("STAFF".equals(role) || "ADMIN".equals(role)) {
             return teachers;
         }
 
         if ("PARTNER".equals(role)) {
             return teachers.stream()
-                    .filter(teacher ->
-                            granted.contains(
-                                    username + ":" + teacher.getId()
-                            )
-                    )
+                    .filter(t -> granted.contains(username + ":" + t.getId()))
                     .toList();
         }
 
-        // Other roles must not see Partner-shared profiles.
         return List.of();
     }
 
-    public boolean canPartnerAccessTeacher(
-            String username,
-            long teacherId) {
-
+    public boolean canPartnerAccessTeacher(String username, long teacherId) {
         if (username == null || !userExists(username)) {
             return false;
         }
@@ -336,16 +235,11 @@ public class PortalStore {
         }
 
         granted.add(username + ":" + teacherId);
-
-        log(
-                "STAFF",
-                "Granted teacher " + teacherId + " to " + username
-        );
+        log("STAFF", "Granted teacher " + teacherId + " to " + username);
     }
 
     public void status(long id, String status) {
         TeacherProfile teacher = teacher(id);
-
         if (teacher == null || status == null || status.isBlank()) {
             return;
         }
@@ -356,12 +250,28 @@ public class PortalStore {
         }
 
         teacher.setStatus(normalizedStatus);
+        log("STAFF", "Updated " + teacher.getName() + " status to " + normalizedStatus);
+    }
 
-        log(
-                "STAFF",
-                "Updated " + teacher.getName()
-                        + " status to " + status
-        );
+    public void updateTeacherNameInInterviews(long teacherId, String newName) {
+        if (newName == null || newName.isBlank()) return;
+        for (Interview interview : interviews) {
+            if (interview.getTeacherId() == teacherId) {
+                // Replace or update interview
+                interviews.remove(interview);
+                interviews.add(new Interview(
+                        interview.getId(),
+                        interview.getTeacherId(),
+                        newName,
+                        interview.getPartner(),
+                        interview.getDateTime(),
+                        interview.getStatus(),
+                        interview.getResult(),
+                        interview.getFeedback(),
+                        interview.getMeetingUrl()
+                ));
+            }
+        }
     }
 
     // =========================
@@ -372,10 +282,7 @@ public class PortalStore {
         return interviews;
     }
 
-    public List<Interview> visibleInterviews(
-            String role,
-            String username) {
-
+    public List<Interview> visibleInterviews(String role, String username) {
         if ("STAFF".equals(role) || "ADMIN".equals(role)) {
             return interviews;
         }
@@ -386,44 +293,32 @@ public class PortalStore {
                 return List.of();
             }
             return interviews.stream()
-                    .filter(interview -> interview.getTeacherId() == teacherId)
+                    .filter(i -> i.getTeacherId() == teacherId)
                     .toList();
         }
 
         if ("PARTNER".equals(role)) {
             AppUser user = users.get(username);
-
             if (user == null) {
                 return List.of();
             }
 
             String partnerName = user.getFullName();
-
             if (partnerName == null || partnerName.isBlank()) {
                 partnerName = user.getUsername();
             }
 
             final String currentPartner = partnerName;
-
             return interviews.stream()
-                    .filter(interview ->
-                            interview.getPartner() != null
-                                    && interview.getPartner()
-                                    .equalsIgnoreCase(currentPartner)
-                    )
+                    .filter(i -> i.getPartner() != null && i.getPartner().equalsIgnoreCase(currentPartner))
                     .toList();
         }
 
         return List.of();
     }
 
-    public boolean requestInterview(
-            long teacherId,
-            String partnerName,
-            String dateTime) {
-
+    public boolean requestInterview(long teacherId, String partnerName, String dateTime) {
         TeacherProfile teacher = teacher(teacherId);
-
         if (teacher == null
                 || partnerName == null
                 || partnerName.isBlank()
@@ -433,7 +328,6 @@ public class PortalStore {
         }
 
         long newId = interviewIds.incrementAndGet();
-
         Interview interview = new Interview(
                 newId,
                 teacherId,
@@ -447,22 +341,11 @@ public class PortalStore {
         );
 
         interviews.add(interview);
-
-        log(
-                partnerName,
-                "Interview requested for " + teacher.getName()
-                        + " at " + dateTime
-        );
-
+        log(partnerName, "Interview requested for " + teacher.getName() + " at " + dateTime);
         return true;
     }
 
-    public void updateInterview(
-            long id,
-            String status,
-            String result,
-            String feedback) {
-
+    public void updateInterview(long id, String status, String result, String feedback) {
         Interview interview = findInterview(id);
         if (interview == null) {
             return;
@@ -471,11 +354,11 @@ public class PortalStore {
         String normalizedStatus = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
         String normalizedResult = result == null ? "" : result.trim();
         if ((!normalizedStatus.isBlank()
-                        && !Set.of("PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "DECLINED")
-                                .contains(normalizedStatus))
+                && !Set.of("PENDING", "CONFIRMED", "COMPLETED", "CANCELLED", "DECLINED")
+                .contains(normalizedStatus))
                 || (!normalizedResult.isBlank()
-                        && !Set.of("Not reviewed", "Pending review", "Qualified", "Rejected")
-                                .contains(normalizedResult))) {
+                && !Set.of("Not reviewed", "Pending review", "Qualified", "Rejected")
+                .contains(normalizedResult))) {
             return;
         }
 
@@ -491,17 +374,10 @@ public class PortalStore {
             interview.setFeedback(feedback);
         }
 
-        // This is a demo placeholder, not a generated meeting.
-        // A real meeting URL must be supplied by the scheduling workflow.
         log("INTERVIEW", "Updated interview #" + id);
     }
 
-    public boolean updatePartnerFeedback(
-            long interviewId,
-            String username,
-            String result,
-            String feedback) {
-
+    public boolean updatePartnerFeedback(long interviewId, String username, String result, String feedback) {
         if (username == null || result == null || result.isBlank()
                 || feedback == null || feedback.isBlank()
                 || !Set.of("Pending review", "Qualified", "Rejected").contains(result)) {
@@ -509,24 +385,20 @@ public class PortalStore {
         }
 
         AppUser user = users.get(username);
-
         if (user == null || !"PARTNER".equals(user.getRole())) {
             return false;
         }
 
         String partnerName = user.getFullName();
-
         if (partnerName == null || partnerName.isBlank()) {
             partnerName = user.getUsername();
         }
 
         Interview interview = findInterview(interviewId);
-
         if (interview == null || interview.getPartner() == null) {
             return false;
         }
 
-        // A Partner can only update an interview assigned to that Partner.
         if (!interview.getPartner().equalsIgnoreCase(partnerName)) {
             return false;
         }
@@ -534,23 +406,14 @@ public class PortalStore {
         interview.setResult(result);
         interview.setFeedback(feedback);
 
-        log(
-                username,
-                "Submitted feedback for interview #" + interviewId
-                        + ": " + result
-        );
-
+        log(username, "Submitted feedback for interview #" + interviewId + ": " + result);
         return true;
     }
 
-    public boolean updateTeacherInterview(
-            long interviewId,
-            long teacherId,
-            String status) {
-
+    public boolean updateTeacherInterview(long interviewId, long teacherId, String status) {
         if (status == null
                 || !(status.equalsIgnoreCase("CONFIRMED")
-                        || status.equalsIgnoreCase("DECLINED"))) {
+                || status.equalsIgnoreCase("DECLINED"))) {
             return false;
         }
 
@@ -563,9 +426,9 @@ public class PortalStore {
         return true;
     }
 
-    private Interview findInterview(long id) {
+    public Interview findInterview(long id) {
         return interviews.stream()
-                .filter(interview -> interview.getId() == id)
+                .filter(i -> i.getId() == id)
                 .findFirst()
                 .orElse(null);
     }
