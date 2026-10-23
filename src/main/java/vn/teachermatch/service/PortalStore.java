@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class PortalStore {
 
     private final Map<String, AppUser> users = new LinkedHashMap<>();
+    private final Map<String, Long> teacherAccounts = new LinkedHashMap<>();
     private final List<TeacherProfile> teachers = new ArrayList<>();
     private final List<Interview> interviews = new ArrayList<>();
     private final List<LogEntry> logs = new ArrayList<>();
@@ -30,8 +31,13 @@ public class PortalStore {
     private final Set<String> granted = new HashSet<>();
 
     private final AtomicLong interviewIds = new AtomicLong(3);
+    private final AtomicLong teacherIds = new AtomicLong(3);
 
     public PortalStore() {
+        LocalDateTime firstInterviewTime = LocalDateTime.now().plusDays(2)
+                .withHour(10).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime secondInterviewTime = LocalDateTime.now().plusDays(3)
+                .withHour(14).withMinute(30).withSecond(0).withNano(0);
         // Demo accounts
         users.put(
                 "admin",
@@ -84,8 +90,8 @@ public class PortalStore {
                         "5 years",
                         "TEFL, Bachelor's degree",
                         "READY",
-                        "https://example.com/emily-demo",
-                        "https://example.com/emily-cv"
+                        "",
+                        ""
                 )
         );
 
@@ -99,8 +105,8 @@ public class PortalStore {
                         "3 years",
                         "CELTA",
                         "READY",
-                        "https://example.com/daniel-demo",
-                        "https://example.com/daniel-cv"
+                        "",
+                        ""
                 )
         );
 
@@ -114,10 +120,12 @@ public class PortalStore {
                         "7 years",
                         "TESOL, Master's degree",
                         "PENDING",
-                        "https://example.com/sarah-demo",
-                        "https://example.com/sarah-cv"
+                        "",
+                        ""
                 )
         );
+
+        teacherAccounts.put("teacher", 1L);
 
         // Initially, the demo Partner can view teachers 1 and 2.
         granted.add("partner:1");
@@ -130,7 +138,7 @@ public class PortalStore {
                         1,
                         "Emily Martin",
                         "Bright English Center",
-                        "2026-10-20T10:00",
+                        firstInterviewTime.toString(),
                         "PENDING",
                         "Not reviewed",
                         "",
@@ -144,11 +152,11 @@ public class PortalStore {
                         2,
                         "Daniel Walker",
                         "Bright English Center",
-                        "2026-10-21T14:30",
+                        secondInterviewTime.toString(),
                         "CONFIRMED",
                         "Not reviewed",
                         "",
-                        "https://meet.google.com/"
+                        ""
                 )
         );
 
@@ -164,7 +172,13 @@ public class PortalStore {
     }
 
     public boolean userExists(String username) {
-        return username != null && users.containsKey(username);
+        return username != null && users.containsKey(username.trim());
+    }
+
+    public List<AppUser> partners() {
+        return users.values().stream()
+                .filter(user -> "PARTNER".equalsIgnoreCase(user.getRole()))
+                .toList();
     }
 
     public String userRole(String username) {
@@ -172,19 +186,37 @@ public class PortalStore {
         return user == null ? null : user.getRole();
     }
 
-    public AppUser authenticate(String username, String password) {
-        if (username == null || password == null) {
+    public AppUser authenticate(String usernameOrEmail, String password) {
+        if (usernameOrEmail == null || password == null) {
             return null;
         }
 
-        AppUser user = users.get(username);
+        String identifier = usernameOrEmail.trim();
+        AppUser user = users.get(identifier);
 
         if (user == null) {
+            TeacherProfile matchedTeacher = teachers.stream()
+                    .filter(teacher -> teacher.getEmail() != null
+                            && teacher.getEmail().equalsIgnoreCase(identifier))
+                    .findFirst()
+                    .orElse(null);
+            if (matchedTeacher != null) {
+                String teacherUsername = teacherAccounts.entrySet().stream()
+                        .filter(entry -> entry.getValue() == matchedTeacher.getId())
+                        .map(Map.Entry::getKey)
+                        .findFirst()
+                        .orElse(null);
+                user = teacherUsername == null ? null : users.get(teacherUsername);
+            }
+        }
+
+        if (user == null || !user.getPassword().equals(password)) {
             return null;
         }
 
-        return user.getPassword().equals(password) ? user : null;
+        return user;
     }
+
 
     public void addUser(String username, String password, String role) {
         if (username == null || username.isBlank()
@@ -207,6 +239,13 @@ public class PortalStore {
                 )
         );
 
+        if ("TEACHER".equalsIgnoreCase(role.trim())) {
+            long teacherId = teacherIds.incrementAndGet();
+            teachers.add(new TeacherProfile(
+                    teacherId, username.trim(), "", "", "", "", "", "PENDING", "", ""));
+            teacherAccounts.put(username.trim(), teacherId);
+        }
+
         log("ADMIN", "Created account " + username);
     }
 
@@ -223,6 +262,23 @@ public class PortalStore {
                 .filter(teacher -> teacher.getId() == id)
                 .findFirst()
                 .orElse(null);
+    }
+    public Long teacherIdForUser(String username) {
+        return username == null ? null : teacherAccounts.get(username.trim());
+    }
+
+    public boolean teacherEmailInUse(String email, long exceptTeacherId) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        return teachers.stream()
+                .anyMatch(teacher -> teacher.getId() != exceptTeacherId
+                        && teacher.getEmail() != null
+                        && teacher.getEmail().equalsIgnoreCase(email.trim()));
+    }
+    public TeacherProfile teacherForUser(String username) {
+        Long teacherId = teacherIdForUser(username);
+        return teacherId == null ? null : teacher(teacherId);
     }
 
     public List<TeacherProfile> visibleTeachers(
@@ -325,10 +381,12 @@ public class PortalStore {
         }
 
         if ("TEACHER".equals(role)) {
-            // Retained from the original demo mapping.
-            // Replace this when TeacherProfile is linked to AppUser.
+            Long teacherId = teacherIdForUser(username);
+            if (teacherId == null) {
+                return List.of();
+            }
             return interviews.stream()
-                    .filter(interview -> interview.getTeacherId() == 1)
+                    .filter(interview -> interview.getTeacherId() == teacherId)
                     .toList();
         }
 

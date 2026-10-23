@@ -117,7 +117,7 @@ public class PortalController {
     }
 
     @GetMapping("/login")
-    public String login(HttpSession session) {
+    public String login(HttpSession session, Model model) {
         // If already logged in, go to the matching dashboard.
         AppUser user = current(session);
 
@@ -125,6 +125,7 @@ public class PortalController {
             return dashboardFor(user.getRole());
         }
 
+        model.addAttribute("selectedRole", "STAFF");
         return "login";
     }
 
@@ -132,12 +133,18 @@ public class PortalController {
     public String doLogin(
             @RequestParam String username,
             @RequestParam String password,
+            @RequestParam(defaultValue = "") String selectedRole,
             Model model,
             HttpSession session) {
 
         String normalizedUsername = username == null
                 ? ""
                 : username.trim();
+        String normalizedRole = selectedRole == null
+                ? ""
+                : selectedRole.trim().toUpperCase(Locale.ROOT);
+        model.addAttribute("selectedRole", normalizedRole);
+        model.addAttribute("username", normalizedUsername);
 
         if (normalizedUsername.isBlank()
                 || password == null
@@ -151,6 +158,10 @@ public class PortalController {
             return "login";
         }
 
+        if (!ALLOWED_ROLES.contains(normalizedRole)) {
+            model.addAttribute("error", "Please select a valid account role.");
+            return "login";
+        }
         AppUser user = store.authenticate(normalizedUsername, password);
 
         if (user == null) {
@@ -175,6 +186,13 @@ public class PortalController {
             return "login";
         }
 
+        if (!normalizedRole.equalsIgnoreCase(userRole.trim())) {
+            model.addAttribute(
+                    "error",
+                    "The selected role does not match this account. Choose the correct role and try again."
+            );
+            return "login";
+        }
         // Save the authenticated user in the session.
         session.setAttribute("user", user);
 
@@ -284,6 +302,7 @@ public class PortalController {
 
         model.addAttribute("teachers", store.teachers());
         model.addAttribute("interviews", store.interviews());
+        model.addAttribute("partners", store.partners());
 
         return "staff";
     }
@@ -422,7 +441,7 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        model.addAttribute("teacher", store.teacher(1));
+        model.addAttribute("teacher", store.teacherForUser(username(session)));
 
         model.addAttribute(
                 "interviews",
@@ -446,7 +465,7 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        TeacherProfile teacher = store.teacher(1);
+        TeacherProfile teacher = store.teacherForUser(username(session));
 
         if (teacher == null) {
             return "redirect:/teacher";
@@ -455,7 +474,8 @@ public class PortalController {
         String normalizedName = name == null ? "" : name.trim();
         String normalizedEmail = email == null ? "" : email.trim();
         if (normalizedName.isBlank()
-                || !normalizedEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                || !normalizedEmail.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")
+                || store.teacherEmailInUse(normalizedEmail, teacher.getId())) {
             return "redirect:/teacher";
         }
 
@@ -528,7 +548,7 @@ public class PortalController {
                 StandardCopyOption.REPLACE_EXISTING
         );
 
-        TeacherProfile teacher = store.teacher(1);
+        TeacherProfile teacher = store.teacherForUser(username(session));
 
         if (teacher == null) {
             Files.deleteIfExists(destination);
@@ -558,15 +578,16 @@ public class PortalController {
             return ResponseEntity.notFound().build();
         }
 
-        TeacherProfile teacher = store.teacher(1);
         String fileUrl = "/uploads/" + filename;
-        boolean isLinkedDocument = teacher != null
-                && (fileUrl.equals(teacher.getCvUrl())
-                        || fileUrl.equals(teacher.getCertificateUrl())
-                        || fileUrl.equals(teacher.getVideoUrl()));
-        if (!isLinkedDocument
+        TeacherProfile teacher = store.teachers().stream()
+                .filter(profile -> fileUrl.equals(profile.getCvUrl())
+                        || fileUrl.equals(profile.getCertificateUrl())
+                        || fileUrl.equals(profile.getVideoUrl()))
+                .findFirst()
+                .orElse(null);
+        if (teacher == null
                 || (hasRole(session, "PARTNER")
-                        && !store.canPartnerAccessTeacher(username(session), 1))) {
+                        && !store.canPartnerAccessTeacher(username(session), teacher.getId()))) {
             return ResponseEntity.notFound().build();
         }
         Path filePath = UPLOAD_DIR.resolve(filename).normalize();
@@ -600,7 +621,11 @@ public class PortalController {
             return "redirect:/login";
         }
 
-        store.updateTeacherInterview(id, 1, status);
+        Long teacherId = store.teacherIdForUser(username(session));
+        if (teacherId == null) {
+            return "redirect:/teacher";
+        }
+        store.updateTeacherInterview(id, teacherId, status);
 
         return "redirect:/teacher";
     }

@@ -270,8 +270,7 @@
             <h2>Login</h2>
 
             <p class="description">
-                Please select your designated role to access
-                the appropriate workspace.
+                Choose the role assigned to your account.
             </p>
 
             <div class="error-message"
@@ -284,15 +283,15 @@
             <form th:action="@{/login}" method="post">
 
                 <div class="form-group">
-                    <label for="selectedRole">Preview role</label>
+                    <label for="selectedRole">Account role</label>
 
                     <select id="selectedRole"
                             name="selectedRole"
                             required>
-                        <option value="STAFF">Matching Staff</option>
-                        <option value="ADMIN">Administrator</option>
-                        <option value="TEACHER">Teacher</option>
-                        <option value="PARTNER">Partner</option>
+                        <option value="STAFF" th:selected="${selectedRole == 'STAFF'}">Matching Staff</option>
+                        <option value="ADMIN" th:selected="${selectedRole == 'ADMIN'}">Administrator</option>
+                        <option value="TEACHER" th:selected="${selectedRole == 'TEACHER'}">Teacher</option>
+                        <option value="PARTNER" th:selected="${selectedRole == 'PARTNER'}">Partner</option>
                     </select>
                 </div>
 
@@ -302,6 +301,7 @@
                     <input id="username"
                            name="username"
                            type="text"
+                           th:value="${username}"
                            placeholder="Enter your email or username"
                            autocomplete="username"
                            required>
@@ -318,14 +318,6 @@
                            required>
                 </div>
 
-                <div class="remember-row">
-                    <input id="rememberMe"
-                           name="rememberMe"
-                           type="checkbox">
-
-                    <label for="rememberMe">Remember me</label>
-                </div>
-
                 <button class="submit-button" type="submit">
                     Enter interface
                 </button>
@@ -334,8 +326,7 @@
 
             <div class="login-note">
                 Access is restricted to authorized accounts.
-                Select the role associated with your account.
-                Your selected role must match your account permissions.
+                Choose the role linked to your account.
             </div>
 
         </div>

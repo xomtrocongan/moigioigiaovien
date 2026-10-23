@@ -54,7 +54,7 @@
 </head>
 <body>
 <div class="partner-layout">
-    <div th:replace="~{fragments :: sidebar('dashboard')}"></div>
+    <div th:replace="~{fragments :: sidebar('partner', 'dashboard')}"></div>
 
     <main class="partner-main">
         <header class="partner-topbar">
@@ -63,7 +63,7 @@
                 <h1 class="partner-title">Shared profiles</h1>
             </div>
             <div class="partner-user">
-                <div class="partner-avatar">BE</div>
+                <div class="partner-avatar" th:text="${user != null and user.fullName != null and !user.fullName.isBlank() ? #strings.substring(user.fullName,0,1).toUpperCase() : 'P'}">P</div>
                 <div>
                     <strong th:text="${user != null and user.fullName != null ? user.fullName : 'Hiring Partner'}">Bright English Center</strong>
                     <small>Hiring partner</small>
@@ -123,7 +123,7 @@
                            th:href="${teacher.cvUrl}" target="_blank" rel="noopener">View CV ↗</a>
                         <span th:unless="${teacher.cvUrl != null and !teacher.cvUrl.isEmpty()}" class="partner-muted">CV not uploaded</span>
 
-                        <a th:if="${teacher.certificateUrl != null and !teacher.certificateUrl.isEmpty()}" th:href="${teacher.certificateUrl}" target="_blank" rel="noopener">View certificate ↗</a>
+                        <a th:if="${teacher.certificateUrl != null and !teacher.certificateUrl.isEmpty()}" th:href="${teacher.certificateUrl}" target="_blank" rel="noopener">View certificate ↗</a><span th:unless="${teacher.certificateUrl != null and !teacher.certificateUrl.isEmpty()}" class="partner-muted">Certificate not uploaded</span>
                         <a th:if="${teacher.videoUrl != null and !teacher.videoUrl.isEmpty()}"
                            th:href="${teacher.videoUrl}" target="_blank" rel="noopener">Demo video ↗</a>
                         <span th:unless="${teacher.videoUrl != null and !teacher.videoUrl.isEmpty()}" class="partner-muted">Video not uploaded</span>
